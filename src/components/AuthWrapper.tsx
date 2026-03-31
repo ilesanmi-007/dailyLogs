@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import AuthProvider, { useAuth } from "./AuthProvider";
 import AuthScreen from "./AuthScreen";
@@ -35,6 +36,15 @@ export default function AuthWrapper({
 }: {
   children: React.ReactNode;
 }) {
+  // Register service worker for PWA
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {
+        // SW registration failed — not critical
+      });
+    }
+  }, []);
+
   // Skip AuthProvider entirely when Supabase isn't configured
   if (!isSupabaseConfigured) {
     return <>{children}</>;

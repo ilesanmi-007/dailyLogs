@@ -9,6 +9,8 @@ import {
   formatDate,
   getStreakFromList,
   getCompletionFromList,
+  markReminderSent,
+  fireNotification,
   Activity,
 } from "@/lib/store";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -18,6 +20,9 @@ const AddActivity = dynamic(() => import("@/components/AddActivity"), {
   ssr: false,
 });
 const Timeline = dynamic(() => import("@/components/Timeline"), {
+  ssr: false,
+});
+const WeeklySummary = dynamic(() => import("@/components/WeeklySummary"), {
   ssr: false,
 });
 
@@ -39,6 +44,7 @@ function getShortDate(dateStr: string): string {
 
 export default function Home() {
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [allActivities, setAllActivities] = useState<Activity[]>([]);
   const [streak, setStreak] = useState(0);
   const [selectedDate, setSelectedDate] = useState("");
   const [completion, setCompletion] = useState({ total: 0, done: 0, pct: 0 });
@@ -48,9 +54,10 @@ export default function Home() {
   const refresh = useCallback(async (date?: string) => {
     const d = date || getToday();
     const dayActivities = await getActivitiesByDate(d);
-    const allActivities = await getActivities();
+    const all = await getActivities();
     setActivities(dayActivities);
-    setStreak(getStreakFromList(allActivities));
+    setAllActivities(all);
+    setStreak(getStreakFromList(all));
     setCompletion(getCompletionFromList(dayActivities));
   }, []);
 
@@ -76,6 +83,33 @@ export default function Home() {
   useEffect(() => {
     if (selectedDate) refresh(selectedDate);
   }, [selectedDate, refresh]);
+
+  // Reminder checker — runs every 30 seconds
+  useEffect(() => {
+    const checkReminders = () => {
+      const now = new Date();
+      const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+      const today = getToday();
+
+      allActivities.forEach(async (a) => {
+        if (
+          a.date === today &&
+          a.reminder_time &&
+          !a.reminder_sent &&
+          !a.completed &&
+          !a.skipped &&
+          a.reminder_time <= currentTime
+        ) {
+          fireNotification("DayLog Reminder 🔔", `Time for: ${a.text}`);
+          await markReminderSent(a.id);
+        }
+      });
+    };
+
+    const interval = setInterval(checkReminders, 30000);
+    checkReminders(); // Run immediately on mount
+    return () => clearInterval(interval);
+  }, [allActivities]);
 
   const handleSignOut = async () => {
     if (isSupabaseConfigured) {
@@ -190,6 +224,9 @@ export default function Home() {
           onAdd={() => refresh(selectedDate)}
           defaultDate={selectedDate}
         />
+
+        {/* Weekly Summary — only on today's view */}
+        {isToday && <WeeklySummary activities={allActivities} />}
 
         <div className="section-header">
           <h2 className="section-title">

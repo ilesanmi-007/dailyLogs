@@ -29,13 +29,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: usersError.message }, { status: 500 });
   }
 
-  const users = (usersData?.users || []).map((u) => ({
-    id: u.id,
-    email: u.email || "No email",
-    display_name: u.user_metadata?.display_name || u.email?.split("@")[0] || "Unknown",
-    created_at: u.created_at,
-    last_sign_in: u.last_sign_in_at,
-  }));
+  let pwaInstalls = 0;
+  const users = (usersData?.users || []).map((u) => {
+    const installed = u.user_metadata?.pwa_installed === true;
+    if (installed) pwaInstalls++;
+    return {
+      id: u.id,
+      email: u.email || "No email",
+      display_name: u.user_metadata?.display_name || u.email?.split("@")[0] || "Unknown",
+      created_at: u.created_at,
+      last_sign_in: u.last_sign_in_at,
+      pwa_installed: installed,
+    };
+  });
 
-  return NextResponse.json({ users });
+  return NextResponse.json({ users, pwaInstalls });
 }

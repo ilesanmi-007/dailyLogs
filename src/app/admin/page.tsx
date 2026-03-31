@@ -12,6 +12,7 @@ interface RegisteredUser {
   display_name: string;
   created_at: string;
   last_sign_in: string;
+  pwa_installed?: boolean;
 }
 
 interface UserActivityStats {
@@ -20,12 +21,22 @@ interface UserActivityStats {
   skipped: number;
 }
 
+interface SignupEntry {
+  date: string;
+  count: number;
+  users: string[];
+}
+
 interface AppStats {
   totalUsers: number;
   totalActivities: number;
   totalCompleted: number;
   completionRate: number;
   activitiesToday: number;
+  signupsToday: number;
+  signupsThisWeek: number;
+  signupsThisMonth: number;
+  pwaInstalls: number;
 }
 
 export default function AdminPage() {
@@ -34,6 +45,7 @@ export default function AdminPage() {
   const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
   const [userActivityMap, setUserActivityMap] = useState<Record<string, UserActivityStats>>({});
   const [appStats, setAppStats] = useState<AppStats | null>(null);
+  const [signupTimeline, setSignupTimeline] = useState<SignupEntry[]>([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -102,12 +114,55 @@ export default function AdminPage() {
         const data = await res.json();
         if (data.users) {
           setRegisteredUsers(data.users);
+
+          // Build signup timeline and stats
+          const now = new Date();
+          const todayStr = now.toISOString().split("T")[0];
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+          let signupsToday = 0;
+          let signupsThisWeek = 0;
+          let signupsThisMonth = 0;
+
+          const dateMap: Record<string, string[]> = {};
+
+          data.users.forEach((u: RegisteredUser) => {
+            const createdDate = new Date(u.created_at);
+            const dateKey = createdDate.toISOString().split("T")[0];
+            const name = u.display_name || u.email.split("@")[0];
+
+            if (!dateMap[dateKey]) dateMap[dateKey] = [];
+            dateMap[dateKey].push(name);
+
+            if (dateKey === todayStr) signupsToday++;
+            if (createdDate >= weekAgo) signupsThisWeek++;
+            if (createdDate >= monthStart) signupsThisMonth++;
+          });
+
+          // Create sorted timeline (last 30 days)
+          const timeline: SignupEntry[] = [];
+          for (let i = 29; i >= 0; i--) {
+            const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+            const key = d.toISOString().split("T")[0];
+            timeline.push({
+              date: key,
+              count: dateMap[key]?.length || 0,
+              users: dateMap[key] || [],
+            });
+          }
+          setSignupTimeline(timeline);
+
           setAppStats({
             totalUsers: data.users.length,
             totalActivities,
             totalCompleted,
             completionRate: totalActivities > 0 ? Math.round((totalCompleted / totalActivities) * 100) : 0,
             activitiesToday: todayCount,
+            signupsToday,
+            signupsThisWeek,
+            signupsThisMonth,
+            pwaInstalls: data.pwaInstalls || 0,
           });
         }
       } catch {
@@ -119,6 +174,10 @@ export default function AdminPage() {
           totalCompleted,
           completionRate: totalActivities > 0 ? Math.round((totalCompleted / totalActivities) * 100) : 0,
           activitiesToday: todayCount,
+          signupsToday: 0,
+          signupsThisWeek: 0,
+          signupsThisMonth: 0,
+          pwaInstalls: 0,
         });
       }
     }
@@ -201,6 +260,106 @@ export default function AdminPage() {
               <span className="admin-stat-num">{appStats.activitiesToday}</span>
               <span className="admin-stat-label">Today&apos;s Activities</span>
             </div>
+            <div className="admin-stat-card">
+              <span className="admin-stat-num">{appStats.pwaInstalls}</span>
+              <span className="admin-stat-label">App Installs</span>
+            </div>
+          </div>
+        )}
+
+        {/* Signup Tracker */}
+        {appStats && (
+          <div className="signup-tracker">
+            <div className="section-header" style={{ marginTop: "1.5rem" }}>
+              <h2 className="section-title">Signup Tracker</h2>
+              <span className="activity-count">Last 30 days</span>
+            </div>
+
+            <div className="signup-summary-row">
+              <div className="signup-summary-item">
+                <span className="signup-summary-num">{appStats.signupsToday}</span>
+                <span className="signup-summary-label">Today</span>
+              </div>
+              <div className="signup-summary-item">
+                <span className="signup-summary-num">{appStats.signupsThisWeek}</span>
+                <span className="signup-summary-label">This Week</span>
+              </div>
+              <div className="signup-summary-item">
+                <span className="signup-summary-num">{appStats.signupsThisMonth}</span>
+                <span className="signup-summary-label">This Month</span>
+              </div>
+              <div className="signup-summary-item">
+                <span className="signup-summary-num">{appStats.totalUsers}</span>
+                <span className="signup-summary-label">All Time</span>
+              </div>
+            </div>
+
+            <div className="signup-chart">
+              {signupTimeline.map((entry) => {
+                const maxCount = Math.max(...signupTimeline.map((e) => e.count), 1);
+                const heightPct = entry.count > 0 ? Math.max((entry.count / maxCount) * 100, 8) : 0;
+                const isToday = entry.date === new Date().toISOString().split("T")[0];
+                const dayLabel = new Date(entry.date + "T12:00:00").toLocaleDateString("en", { weekday: "narrow" });
+                const dateNum = new Date(entry.date + "T12:00:00").getDate();
+                const showLabel = dateNum === 1 || dateNum % 5 === 0 || isToday;
+                return (
+                  <div
+                    key={entry.date}
+                    className={`signup-chart-bar-wrap ${isToday ? "is-today" : ""}`}
+                    title={`${entry.date}: ${entry.count} signup${entry.count !== 1 ? "s" : ""}${entry.users.length > 0 ? "\n" + entry.users.join(", ") : ""}`}
+                  >
+                    <div className="signup-chart-bar-container">
+                      {entry.count > 0 && (
+                        <div
+                          className="signup-chart-bar"
+                          style={{ height: `${heightPct}%` }}
+                        >
+                          <span className="signup-chart-count">{entry.count}</span>
+                        </div>
+                      )}
+                    </div>
+                    {showLabel && (
+                      <span className="signup-chart-label">
+                        {isToday ? "Today" : `${dayLabel}${dateNum}`}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Recent signups list */}
+            {registeredUsers.filter((u) => {
+              const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+              return new Date(u.created_at) >= weekAgo;
+            }).length > 0 && (
+              <div className="signup-recent">
+                <p className="signup-recent-title">Recent Signups (7 days)</p>
+                {registeredUsers
+                  .filter((u) => {
+                    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                    return new Date(u.created_at) >= weekAgo;
+                  })
+                  .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                  .map((u) => (
+                    <div key={u.id} className="signup-recent-item">
+                      <div className="signup-recent-dot" />
+                      <div>
+                        <span className="signup-recent-name">{u.display_name}</span>
+                        <span className="signup-recent-date">
+                          {new Date(u.created_at).toLocaleDateString("en", {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -221,7 +380,12 @@ export default function AdminPage() {
                     {user.display_name.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <p className="admin-user-id">{user.display_name}</p>
+                    <p className="admin-user-id">
+                      {user.display_name}
+                      {user.pwa_installed && (
+                        <span className="pwa-badge" title="Installed PWA">📱</span>
+                      )}
+                    </p>
                     <p className="admin-user-meta">
                       {user.email} · Joined {new Date(user.created_at).toLocaleDateString()}
                     </p>

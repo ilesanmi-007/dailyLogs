@@ -8,7 +8,10 @@ import {
   toggleActivity,
   skipActivity,
   unskipActivity,
+  setReminder,
+  clearReminder,
   formatTime,
+  getToday,
 } from "@/lib/store";
 
 interface Props {
@@ -27,6 +30,8 @@ export default function Timeline({
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [skipModalId, setSkipModalId] = useState<string | null>(null);
   const [skipReason, setSkipReason] = useState("");
+  const [reminderEditId, setReminderEditId] = useState<string | null>(null);
+  const [reminderEditTime, setReminderEditTime] = useState("");
 
   if (activities.length === 0) {
     return (
@@ -43,8 +48,8 @@ export default function Timeline({
     onChange();
   };
 
-  const handleToggle = async (id: string) => {
-    await toggleActivity(id);
+  const handleToggle = async (id: string, currentCompleted: boolean) => {
+    await toggleActivity(id, currentCompleted);
     onChange();
   };
 
@@ -58,6 +63,19 @@ export default function Timeline({
 
   const handleUnskip = async (id: string) => {
     await unskipActivity(id);
+    onChange();
+  };
+
+  const handleSetReminder = async (id: string, time: string) => {
+    await setReminder(id, time);
+    setReminderEditId(null);
+    setReminderEditTime("");
+    onChange();
+  };
+
+  const handleClearReminder = async (id: string) => {
+    await clearReminder(id);
+    setReminderEditId(null);
     onChange();
   };
 
@@ -139,7 +157,7 @@ export default function Timeline({
                   className={`check-btn ${isDone ? "checked" : ""} ${isSkipped ? "skipped-check" : ""}`}
                   onClick={() => {
                     if (isSkipped) return;
-                    handleToggle(activity.id);
+                    handleToggle(activity.id, activity.completed);
                   }}
                   style={{
                     borderColor: isDone ? cat.color : isSkipped ? "#f59e0b" : undefined,
@@ -173,7 +191,13 @@ export default function Timeline({
                   <div className="timeline-connector" />
                 )}
               </div>
-              <div className="timeline-content">
+              <div
+                className="timeline-content"
+                onClick={() => {
+                  if (!isSkipped) handleToggle(activity.id, activity.completed);
+                }}
+                style={{ cursor: isSkipped ? "default" : "pointer" }}
+              >
                 <div className="timeline-header">
                   <span className="timeline-time">
                     {formatTime(activity.timestamp)}
@@ -181,7 +205,7 @@ export default function Timeline({
                       <span className="timeline-date"> · {activity.date}</span>
                     )}
                   </span>
-                  <div className="timeline-actions">
+                  <div className="timeline-actions" onClick={(e) => e.stopPropagation()}>
                     {!isDone && !isSkipped && (
                       <button
                         onClick={() => {
@@ -238,7 +262,63 @@ export default function Timeline({
                   {isSkipped && (
                     <span className="timeline-skipped-badge">Skipped</span>
                   )}
+                  {/* Reminder badge */}
+                  {activity.reminder_time && !isDone && !isSkipped && activity.date === getToday() && (
+                    <span
+                      className={`timeline-reminder-badge ${activity.reminder_sent ? "sent" : ""}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setReminderEditId(reminderEditId === activity.id ? null : activity.id);
+                        setReminderEditTime(activity.reminder_time || "");
+                      }}
+                    >
+                      🔔 {activity.reminder_time}
+                    </span>
+                  )}
+                  {/* Add reminder button for today's tasks without one */}
+                  {!activity.reminder_time && !isDone && !isSkipped && activity.date === getToday() && (
+                    <button
+                      className="timeline-add-reminder"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const now = new Date();
+                        now.setHours(now.getHours() + 1);
+                        const hh = now.getHours().toString().padStart(2, "0");
+                        const mm = now.getMinutes().toString().padStart(2, "0");
+                        setReminderEditId(activity.id);
+                        setReminderEditTime(`${hh}:${mm}`);
+                      }}
+                    >
+                      🔔
+                    </button>
+                  )}
                 </div>
+                {/* Inline reminder editor */}
+                {reminderEditId === activity.id && (
+                  <div className="reminder-edit-row" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="time"
+                      value={reminderEditTime}
+                      onChange={(e) => setReminderEditTime(e.target.value)}
+                      className="reminder-edit-input"
+                    />
+                    <button
+                      className="reminder-edit-save"
+                      onClick={() => handleSetReminder(activity.id, reminderEditTime)}
+                      disabled={!reminderEditTime}
+                    >
+                      Set
+                    </button>
+                    {activity.reminder_time && (
+                      <button
+                        className="reminder-edit-clear"
+                        onClick={() => handleClearReminder(activity.id)}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           );

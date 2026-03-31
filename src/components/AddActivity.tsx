@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CATEGORIES, addActivity, getToday, formatDate } from "@/lib/store";
+import { CATEGORIES, addActivity, getToday, formatDate, requestNotificationPermission } from "@/lib/store";
 
 interface Props {
   onAdd: () => void;
@@ -15,6 +15,7 @@ export default function AddActivity({ onAdd, defaultDate }: Props) {
   const [tags, setTags] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(defaultDate || getToday());
+  const [reminderTime, setReminderTime] = useState("");
 
   const handleAddTag = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && tagInput.trim()) {
@@ -41,6 +42,11 @@ export default function AddActivity({ onAdd, defaultDate }: Props) {
     const secs = now.getSeconds().toString().padStart(2, "0");
     const timestamp = `${selectedDate}T${hours}:${mins}:${secs}`;
 
+    // Request notification permission if reminder is set
+    if (reminderTime) {
+      await requestNotificationPermission();
+    }
+
     await addActivity({
       text: text.trim(),
       category,
@@ -49,11 +55,13 @@ export default function AddActivity({ onAdd, defaultDate }: Props) {
       date: selectedDate,
       completed: false,
       skipped: false,
+      ...(reminderTime ? { reminder_time: reminderTime, reminder_sent: false } : {}),
     });
 
     setText("");
     setTags([]);
     setTagInput("");
+    setReminderTime("");
     setIsOpen(false);
     setSelectedDate(defaultDate || getToday());
     onAdd();
@@ -136,6 +144,47 @@ export default function AddActivity({ onAdd, defaultDate }: Props) {
           </p>
         )}
       </div>
+
+      {/* Reminder */}
+      {selectedDate === getToday() && (
+        <div className="form-section">
+          <label className="form-label">Remind me</label>
+          <div className="reminder-row">
+            {reminderTime ? (
+              <>
+                <input
+                  type="time"
+                  value={reminderTime}
+                  onChange={(e) => setReminderTime(e.target.value)}
+                  className="reminder-input"
+                />
+                <button
+                  type="button"
+                  className="reminder-clear"
+                  onClick={() => setReminderTime("")}
+                >
+                  ✕
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                className="reminder-add-btn"
+                onClick={() => {
+                  // Default to 1 hour from now
+                  const now = new Date();
+                  now.setHours(now.getHours() + 1);
+                  const hh = now.getHours().toString().padStart(2, "0");
+                  const mm = now.getMinutes().toString().padStart(2, "0");
+                  setReminderTime(`${hh}:${mm}`);
+                }}
+              >
+                🔔 Set a reminder
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="form-section">
         <label className="form-label">Category</label>
