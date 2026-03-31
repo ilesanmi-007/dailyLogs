@@ -797,8 +797,219 @@ body::after {
   padding: 0.15rem;
 }
 
-.timeline-content:hover .delete-btn { opacity: 0.4; }
-.delete-btn:hover { opacity: 1 !important; }
+.timeline-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.timeline-content:hover .delete-btn,
+.timeline-content:hover .skip-btn { opacity: 0.4; }
+.delete-btn:hover, .skip-btn:hover { opacity: 1 !important; }
+
+.skip-btn, .unskip-btn {
+  background: none;
+  border: none;
+  font-size: 0.8rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  padding: 0.15rem;
+}
+
+.unskip-btn {
+  opacity: 0.5;
+  font-size: 0.75rem;
+}
+
+.unskip-btn:hover { opacity: 1; }
+
+.timeline-content:hover .unskip-btn { opacity: 0.6; }
+
+/* Skipped state */
+.timeline-item.is-skipped {
+  opacity: 0.7;
+}
+
+.check-btn.skipped-check {
+  cursor: default;
+}
+
+.timeline-text.skipped-text {
+  text-decoration: line-through;
+  text-decoration-color: rgba(245, 158, 11, 0.4);
+  color: var(--text-muted);
+}
+
+.skip-reason-display {
+  font-size: 0.75rem;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.15);
+  border-radius: var(--radius-xs);
+  padding: 0.4rem 0.65rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+}
+
+.skip-reason-label {
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.timeline-skipped-badge {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  padding: 0.15rem 0.5rem;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.skipped-count {
+  color: #f59e0b;
+  font-size: 0.75rem;
+}
+
+/* Skip Modal */
+.skip-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 1rem;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.skip-modal {
+  background: var(--bg-card-solid);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 400px;
+  animation: slideUp 0.25s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.skip-modal-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 1rem;
+}
+
+.skip-modal-input {
+  width: 100%;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-family: inherit;
+  outline: none;
+  resize: none;
+  transition: border-color 0.2s;
+}
+
+.skip-modal-input:focus {
+  border-color: #f59e0b;
+}
+
+.skip-modal-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.skip-quick-btn {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 20px;
+  color: #f59e0b;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.skip-quick-btn:hover {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.skip-modal-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+}
+
+.skip-modal-cancel {
+  flex: 1;
+  padding: 0.65rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.skip-modal-cancel:hover {
+  background: var(--bg-hover);
+}
+
+.skip-modal-submit {
+  flex: 1;
+  padding: 0.65rem;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.skip-modal-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+}
+
+.skip-modal-submit:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
 
 .timeline-text {
   font-size: 0.9rem;

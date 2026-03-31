@@ -10,6 +10,8 @@ export interface Activity {
   timestamp: string;
   date: string;
   completed: boolean;
+  skipped: boolean;
+  skip_reason?: string;
   user_id?: string;
 }
 
@@ -32,6 +34,7 @@ function getLocalActivities(): Activity[] {
   return (JSON.parse(data) as Activity[]).map((a) => ({
     ...a,
     completed: a.completed ?? false,
+    skipped: a.skipped ?? false,
   }));
 }
 
@@ -117,6 +120,45 @@ export async function toggleActivity(id: string): Promise<void> {
   }
 }
 
+export async function skipActivity(id: string, reason: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    const all = getLocalActivities();
+    const idx = all.findIndex((a) => a.id === id);
+    if (idx !== -1) {
+      all[idx].skipped = true;
+      all[idx].skip_reason = reason;
+      all[idx].completed = false;
+      saveLocalActivities(all);
+    }
+    return;
+  }
+
+  const { error } = await supabase
+    .from("activities")
+    .update({ skipped: true, skip_reason: reason, completed: false })
+    .eq("id", id);
+  if (error) console.error("Error skipping activity:", error);
+}
+
+export async function unskipActivity(id: string): Promise<void> {
+  if (!isSupabaseConfigured) {
+    const all = getLocalActivities();
+    const idx = all.findIndex((a) => a.id === id);
+    if (idx !== -1) {
+      all[idx].skipped = false;
+      all[idx].skip_reason = undefined;
+      saveLocalActivities(all);
+    }
+    return;
+  }
+
+  const { error } = await supabase
+    .from("activities")
+    .update({ skipped: false, skip_reason: null })
+    .eq("id", id);
+  if (error) console.error("Error unskipping activity:", error);
+}
+
 export async function getActivitiesByDate(date: string): Promise<Activity[]> {
   if (!isSupabaseConfigured) {
     return getLocalActivities().filter((a) => a.date === date);
@@ -164,8 +206,9 @@ export function formatTime(isoString: string): string {
 export function getCompletionFromList(activities: Activity[]) {
   const total = activities.length;
   const done = activities.filter((a) => a.completed).length;
+  const skipped = activities.filter((a) => a.skipped).length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  return { total, done, pct };
+  return { total, done, skipped, pct };
 }
 
 export function getStreakFromList(activities: Activity[]): number {

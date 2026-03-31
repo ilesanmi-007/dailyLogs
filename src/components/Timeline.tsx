@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Activity, CATEGORIES, deleteActivity, toggleActivity, formatTime } from "@/lib/store";
+import {
+  Activity,
+  CATEGORIES,
+  deleteActivity,
+  toggleActivity,
+  skipActivity,
+  unskipActivity,
+  formatTime,
+} from "@/lib/store";
 
 interface Props {
   activities: Activity[];
@@ -17,6 +25,8 @@ export default function Timeline({
   showFilter = false,
 }: Props) {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [skipModalId, setSkipModalId] = useState<string | null>(null);
+  const [skipReason, setSkipReason] = useState("");
 
   if (activities.length === 0) {
     return (
@@ -38,14 +48,28 @@ export default function Timeline({
     onChange();
   };
 
+  const handleSkipSubmit = async () => {
+    if (!skipModalId || !skipReason.trim()) return;
+    await skipActivity(skipModalId, skipReason.trim());
+    setSkipModalId(null);
+    setSkipReason("");
+    onChange();
+  };
+
+  const handleUnskip = async (id: string) => {
+    await unskipActivity(id);
+    onChange();
+  };
+
   const usedCategories = [...new Set(activities.map((a) => a.category))];
   const filteredActivities = activeFilter
     ? activities.filter((a) => a.category === activeFilter)
     : activities;
 
   const done = activities.filter((a) => a.completed).length;
+  const skipped = activities.filter((a) => a.skipped).length;
   const total = activities.length;
-  const pct = Math.round((done / total) * 100);
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
   return (
     <div className="timeline-wrapper">
@@ -53,6 +77,9 @@ export default function Timeline({
         <div className="progress-info">
           <span className="progress-text">
             {done} of {total} done
+            {skipped > 0 && (
+              <span className="skipped-count"> · {skipped} skipped</span>
+            )}
           </span>
           <span className={`progress-pct ${pct === 100 ? "complete" : ""}`}>
             {pct === 100 ? "All done! ✨" : `${pct}%`}
@@ -100,22 +127,27 @@ export default function Timeline({
         {filteredActivities.map((activity, i) => {
           const cat =
             CATEGORIES.find((c) => c.name === activity.category) || CATEGORIES[0];
+          const isSkipped = activity.skipped;
+          const isDone = activity.completed;
           return (
             <div
               key={activity.id}
-              className={`timeline-item ${activity.completed ? "is-done" : ""}`}
+              className={`timeline-item ${isDone ? "is-done" : ""} ${isSkipped ? "is-skipped" : ""}`}
             >
               <div className="timeline-line">
                 <button
-                  className={`check-btn ${activity.completed ? "checked" : ""}`}
-                  onClick={() => handleToggle(activity.id)}
-                  style={{
-                    borderColor: activity.completed ? cat.color : undefined,
-                    backgroundColor: activity.completed ? cat.color : undefined,
+                  className={`check-btn ${isDone ? "checked" : ""} ${isSkipped ? "skipped-check" : ""}`}
+                  onClick={() => {
+                    if (isSkipped) return;
+                    handleToggle(activity.id);
                   }}
-                  title={activity.completed ? "Mark as not done" : "Mark as done"}
+                  style={{
+                    borderColor: isDone ? cat.color : isSkipped ? "#f59e0b" : undefined,
+                    backgroundColor: isDone ? cat.color : isSkipped ? "#f59e0b" : undefined,
+                  }}
+                  title={isDone ? "Mark as not done" : isSkipped ? "Skipped" : "Mark as done"}
                 >
-                  {activity.completed && (
+                  {isDone && (
                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                       <path
                         d="M2.5 6L5 8.5L9.5 3.5"
@@ -123,6 +155,16 @@ export default function Timeline({
                         strokeWidth="1.8"
                         strokeLinecap="round"
                         strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
+                  {isSkipped && (
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path
+                        d="M3 3L9 9M9 3L3 9"
+                        stroke="white"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
                       />
                     </svg>
                   )}
@@ -139,17 +181,45 @@ export default function Timeline({
                       <span className="timeline-date"> · {activity.date}</span>
                     )}
                   </span>
-                  <button
-                    onClick={() => handleDelete(activity.id)}
-                    className="delete-btn"
-                    title="Delete"
-                  >
-                    🗑
-                  </button>
+                  <div className="timeline-actions">
+                    {!isDone && !isSkipped && (
+                      <button
+                        onClick={() => {
+                          setSkipModalId(activity.id);
+                          setSkipReason("");
+                        }}
+                        className="skip-btn"
+                        title="Skip with reason"
+                      >
+                        ⏭
+                      </button>
+                    )}
+                    {isSkipped && (
+                      <button
+                        onClick={() => handleUnskip(activity.id)}
+                        className="unskip-btn"
+                        title="Undo skip"
+                      >
+                        ↩
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDelete(activity.id)}
+                      className="delete-btn"
+                      title="Delete"
+                    >
+                      🗑
+                    </button>
+                  </div>
                 </div>
-                <p className={`timeline-text ${activity.completed ? "done-text" : ""}`}>
+                <p className={`timeline-text ${isDone ? "done-text" : ""} ${isSkipped ? "skipped-text" : ""}`}>
                   {activity.text}
                 </p>
+                {isSkipped && activity.skip_reason && (
+                  <div className="skip-reason-display">
+                    <span className="skip-reason-label">Reason:</span> {activity.skip_reason}
+                  </div>
+                )}
                 <div className="timeline-meta">
                   <span
                     className="timeline-category"
@@ -165,12 +235,58 @@ export default function Timeline({
                       #{tag}
                     </span>
                   ))}
+                  {isSkipped && (
+                    <span className="timeline-skipped-badge">Skipped</span>
+                  )}
                 </div>
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* Skip Reason Modal */}
+      {skipModalId && (
+        <div className="skip-modal-overlay" onClick={() => setSkipModalId(null)}>
+          <div className="skip-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="skip-modal-title">Why are you skipping this?</h3>
+            <textarea
+              className="skip-modal-input"
+              placeholder="e.g. Ran out of time, got postponed to tomorrow..."
+              value={skipReason}
+              onChange={(e) => setSkipReason(e.target.value)}
+              autoFocus
+              rows={3}
+            />
+            <div className="skip-modal-quick">
+              {["No time", "Postponed", "Not needed", "Blocked"].map((reason) => (
+                <button
+                  key={reason}
+                  className="skip-quick-btn"
+                  onClick={() => setSkipReason(reason)}
+                >
+                  {reason}
+                </button>
+              ))}
+            </div>
+            <div className="skip-modal-actions">
+              <button
+                className="skip-modal-cancel"
+                onClick={() => setSkipModalId(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="skip-modal-submit"
+                onClick={handleSkipSubmit}
+                disabled={!skipReason.trim()}
+              >
+                Skip Task
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
