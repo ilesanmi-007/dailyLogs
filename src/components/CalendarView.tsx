@@ -18,8 +18,15 @@ export default function CalendarView() {
   }, []);
 
   useEffect(() => {
-    loadActivities();
-  }, [loadActivities]);
+    let cancelled = false;
+    getActivities().then((activities) => {
+      if (!cancelled) {
+        setAllActivities(activities);
+        setActivityDates(new Set(activities.map((a) => a.date)));
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (selectedDate) {

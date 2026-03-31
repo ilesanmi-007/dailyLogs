@@ -32,6 +32,7 @@ export default function Timeline({
   const [skipReason, setSkipReason] = useState("");
   const [reminderEditId, setReminderEditId] = useState<string | null>(null);
   const [reminderEditTime, setReminderEditTime] = useState("");
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   if (activities.length === 0) {
     return (
@@ -47,8 +48,6 @@ export default function Timeline({
     await deleteActivity(id);
     onChange();
   };
-
-  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const handleToggle = async (id: string, currentCompleted: boolean) => {
     if (togglingId === id) return; // Prevent double-tap

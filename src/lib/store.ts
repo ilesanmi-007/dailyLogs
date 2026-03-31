@@ -117,7 +117,7 @@ export async function toggleActivity(id: string, currentCompleted?: boolean): Pr
 
   // If current state is provided, use it directly (avoids extra SELECT)
   if (currentCompleted !== undefined) {
-    const { error, count } = await supabase
+    const { error } = await supabase
       .from("activities")
       .update({ completed: !currentCompleted })
       .eq("id", id)

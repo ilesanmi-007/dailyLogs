@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
 interface LocalActivity {
@@ -28,11 +29,13 @@ export default function MigratePage() {
 
   useEffect(() => {
     // Check how many activities are in localStorage
+    let cancelled = false;
     const data = localStorage.getItem(STORAGE_KEY);
-    if (data) {
+    if (data && !cancelled) {
       const activities = JSON.parse(data) as LocalActivity[];
-      setLocalCount(activities.length);
+      setLocalCount(activities.length); // eslint-disable-line react-hooks/set-state-in-effect
     }
+    return () => { cancelled = true; };
   }, []);
 
   const handleMigrate = async () => {
@@ -224,7 +227,7 @@ export default function MigratePage() {
         )}
 
         {status === "done" && (
-          <a
+          <Link
             href="/"
             style={{
               display: "block",
@@ -241,7 +244,7 @@ export default function MigratePage() {
             }}
           >
             Go to DayLog →
-          </a>
+          </Link>
         )}
 
         {logMessages.length > 0 && (

@@ -46,11 +46,17 @@ function getShortDate(dateStr: string): string {
   return new Date(dateStr + "T12:00:00").getDate().toString();
 }
 
+// Get initial date on client side (safe for SSR since getToday returns "" on server)
+function getInitialDate(): string {
+  if (typeof window === "undefined") return "";
+  return getToday();
+}
+
 export default function Home() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [allActivities, setAllActivities] = useState<Activity[]>([]);
   const [streak, setStreak] = useState(0);
-  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState(getInitialDate);
   const [completion, setCompletion] = useState({ total: 0, done: 0, pct: 0 });
   const [mounted, setMounted] = useState(false);
   const [displayName, setDisplayName] = useState("there");
@@ -66,8 +72,6 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const t = getToday();
-    setSelectedDate(t);
     setMounted(true);
 
     // Get user display name if Supabase is configured
@@ -82,11 +86,16 @@ export default function Home() {
         }
       });
     }
-  }, []);
+
+    // Initial data load
+    const d = getToday();
+    refresh(d);
+  }, [refresh]);
 
   useEffect(() => {
-    if (selectedDate) refresh(selectedDate);
-  }, [selectedDate, refresh]);
+    if (selectedDate && mounted) refresh(selectedDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate]);
 
   // Reminder checker — runs every 30 seconds
   useEffect(() => {

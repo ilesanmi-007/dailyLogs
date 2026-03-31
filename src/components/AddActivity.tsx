@@ -3,6 +3,15 @@
 import { useState } from "react";
 import { CATEGORIES, addActivity, getToday, toLocalDateStr, formatDate, requestNotificationPermission } from "@/lib/store";
 
+function getQuickDates() {
+  const now = Date.now();
+  return [
+    { label: "Today", value: getToday() },
+    { label: "Yesterday", value: toLocalDateStr(new Date(now - 86400000)) },
+    { label: "2 days ago", value: toLocalDateStr(new Date(now - 2 * 86400000)) },
+  ];
+}
+
 interface Props {
   onAdd: () => void;
   defaultDate?: string;
@@ -70,18 +79,8 @@ export default function AddActivity({ onAdd, defaultDate }: Props) {
   const isToday = selectedDate === getToday();
   const selectedCat = CATEGORIES.find((c) => c.name === category)!;
 
-  // Quick date shortcuts
-  const quickDates = [
-    { label: "Today", value: getToday() },
-    {
-      label: "Yesterday",
-      value: toLocalDateStr(new Date(Date.now() - 86400000)),
-    },
-    {
-      label: "2 days ago",
-      value: toLocalDateStr(new Date(Date.now() - 2 * 86400000)),
-    },
-  ];
+  // Quick date shortcuts — computed via state initializer to satisfy React 19 purity rules
+  const [quickDates] = useState(getQuickDates);
 
   if (!isOpen) {
     return (
