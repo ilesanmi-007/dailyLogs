@@ -863,6 +863,32 @@ body::after {
   font-weight: 400 !important;
 }
 
+/* ===== Footer Signature ===== */
+
+.app-footer {
+  text-align: center;
+  padding: 1.5rem 1rem 6rem;
+  position: relative;
+}
+
+.footer-text {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.6;
+  transition: opacity 0.3s;
+}
+
+.footer-text:hover {
+  opacity: 1;
+}
+
+.footer-text strong {
+  color: var(--accent-light);
+  font-weight: 600;
+}
+
 /* ===== Bottom Nav ===== */
 
 .navbar {
@@ -1494,10 +1520,132 @@ body::after {
   border-radius: 2px;
 }
 
+/* ===== Admin Dashboard ===== */
+
+.admin-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.admin-stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  transition: all 0.25s;
+}
+
+.admin-stat-card:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-elevated);
+}
+
+.admin-stat-num {
+  font-size: 1.8rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent-light), var(--green));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.admin-stat-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.admin-users-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.admin-user-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1rem 1.25rem;
+  transition: all 0.25s;
+}
+
+.admin-user-card:hover {
+  border-color: var(--border-hover);
+  background: var(--bg-elevated);
+}
+
+.admin-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.admin-user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #6366f1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.admin-user-id {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  font-family: monospace;
+}
+
+.admin-user-meta {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+.admin-user-stats {
+  display: flex;
+  gap: 1.5rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--border);
+}
+
+.admin-user-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.admin-user-stat-num {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.admin-user-stat-label {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 /* ===== Responsive ===== */
 
 @media (max-width: 400px) {
   .category-grid { grid-template-columns: repeat(2, 1fr); }
   .stats-cards { grid-template-columns: repeat(2, 1fr); }
   .day-strip-item { min-width: 38px; padding: 0.35rem 0.4rem; }
+  .admin-stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
