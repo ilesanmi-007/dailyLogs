@@ -6,13 +6,18 @@ import Navbar from "@/components/Navbar";
 
 const ADMIN_EMAIL = "samsonademola56@gmail.com";
 
-interface UserStats {
-  user_id: string;
+interface RegisteredUser {
+  id: string;
   email: string;
-  total_activities: number;
-  completed_activities: number;
-  first_activity: string;
-  last_activity: string;
+  display_name: string;
+  created_at: string;
+  last_sign_in: string;
+}
+
+interface UserActivityStats {
+  total: number;
+  completed: number;
+  skipped: number;
 }
 
 interface AppStats {
@@ -26,7 +31,8 @@ interface AppStats {
 export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState<UserStats[]>([]);
+  const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
+  const [userActivityMap, setUserActivityMap] = useState<Record<string, UserActivityStats>>({});
   const [appStats, setAppStats] = useState<AppStats | null>(null);
   const [error, setError] = useState("");
 
@@ -54,73 +60,68 @@ export default function AdminPage() {
   }
 
   async function loadAdminData() {
-    // Fetch all activities (admin policy allows this)
+    // Fetch activities (admin can see all via RLS policy)
     const { data: activities, error: fetchError } = await supabase
       .from("activities")
       .select("*")
       .order("timestamp", { ascending: false });
 
     if (fetchError) {
-      setError(`Failed to load data: ${fetchError.message}`);
-      return;
+      setError(`Failed to load activities: ${fetchError.message}`);
     }
 
-    if (!activities || activities.length === 0) {
-      setAppStats({
-        totalUsers: 0,
-        totalActivities: 0,
-        totalCompleted: 0,
-        completionRate: 0,
-        activitiesToday: 0,
-      });
-      setUsers([]);
-      return;
-    }
-
-    // Compute per-user stats
-    const userMap: Record<string, {
-      total: number;
-      completed: number;
-      first: string;
-      last: string;
-    }> = {};
-
+    // Compute per-user activity stats
+    const activityMap: Record<string, UserActivityStats> = {};
     const today = new Date().toISOString().split("T")[0];
     let todayCount = 0;
 
-    activities.forEach((a: { user_id: string; completed: boolean; date: string; timestamp: string }) => {
-      if (!userMap[a.user_id]) {
-        userMap[a.user_id] = { total: 0, completed: 0, first: a.timestamp, last: a.timestamp };
+    (activities || []).forEach((a: { user_id: string; completed: boolean; skipped: boolean; date: string }) => {
+      if (!activityMap[a.user_id]) {
+        activityMap[a.user_id] = { total: 0, completed: 0, skipped: 0 };
       }
-      userMap[a.user_id].total++;
-      if (a.completed) userMap[a.user_id].completed++;
-      if (a.timestamp < userMap[a.user_id].first) userMap[a.user_id].first = a.timestamp;
-      if (a.timestamp > userMap[a.user_id].last) userMap[a.user_id].last = a.timestamp;
+      activityMap[a.user_id].total++;
+      if (a.completed) activityMap[a.user_id].completed++;
+      if (a.skipped) activityMap[a.user_id].skipped++;
       if (a.date === today) todayCount++;
     });
 
-    // Get user emails from auth (we'll use user_id as fallback)
-    const userStats: UserStats[] = Object.entries(userMap).map(([uid, stats]) => ({
-      user_id: uid,
-      email: uid.substring(0, 8) + "...",
-      total_activities: stats.total,
-      completed_activities: stats.completed,
-      first_activity: new Date(stats.first).toLocaleDateString(),
-      last_activity: new Date(stats.last).toLocaleDateString(),
-    }));
+    setUserActivityMap(activityMap);
 
-    const totalActivities = activities.length;
-    const totalCompleted = activities.filter((a: { completed: boolean }) => a.completed).length;
+    const totalActivities = (activities || []).length;
+    const totalCompleted = (activities || []).filter((a: { completed: boolean }) => a.completed).length;
 
-    setAppStats({
-      totalUsers: Object.keys(userMap).length,
-      totalActivities,
-      totalCompleted,
-      completionRate: totalActivities > 0 ? Math.round((totalCompleted / totalActivities) * 100) : 0,
-      activitiesToday: todayCount,
-    });
+    // Fetch registered users from API
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
 
-    setUsers(userStats.sort((a, b) => b.total_activities - a.total_activities));
+    if (token) {
+      try {
+        const res = await fetch("/api/admin/users", {
+          headers: { "x-admin-token": token },
+        });
+        const data = await res.json();
+        if (data.users) {
+          setRegisteredUsers(data.users);
+          setAppStats({
+            totalUsers: data.users.length,
+            totalActivities,
+            totalCompleted,
+            completionRate: totalActivities > 0 ? Math.round((totalCompleted / totalActivities) * 100) : 0,
+            activitiesToday: todayCount,
+          });
+        }
+      } catch {
+        // Fallback: count users from activities
+        const uniqueUsers = new Set((activities || []).map((a: { user_id: string }) => a.user_id));
+        setAppStats({
+          totalUsers: uniqueUsers.size,
+          totalActivities,
+          totalCompleted,
+          completionRate: totalActivities > 0 ? Math.round((totalCompleted / totalActivities) * 100) : 0,
+          activitiesToday: todayCount,
+        });
+      }
+    }
   }
 
   if (loading) {
@@ -206,43 +207,54 @@ export default function AdminPage() {
         {/* Users Table */}
         <div className="section-header" style={{ marginTop: "1.5rem" }}>
           <h2 className="section-title">Users</h2>
-          <span className="activity-count">{users.length} registered</span>
+          <span className="activity-count">{registeredUsers.length} registered</span>
         </div>
 
         <div className="admin-users-list">
-          {users.map((user) => (
-            <div key={user.user_id} className="admin-user-card">
-              <div className="admin-user-info">
-                <div className="admin-user-avatar">
-                  {user.email.charAt(0).toUpperCase()}
+          {registeredUsers.map((user) => {
+            const stats = userActivityMap[user.id] || { total: 0, completed: 0, skipped: 0 };
+            const rate = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
+            return (
+              <div key={user.id} className="admin-user-card">
+                <div className="admin-user-info">
+                  <div className="admin-user-avatar">
+                    {user.display_name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="admin-user-id">{user.display_name}</p>
+                    <p className="admin-user-meta">
+                      {user.email} · Joined {new Date(user.created_at).toLocaleDateString()}
+                    </p>
+                    {user.last_sign_in && (
+                      <p className="admin-user-meta">
+                        Last seen {new Date(user.last_sign_in).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <p className="admin-user-id">{user.user_id.substring(0, 12)}...</p>
-                  <p className="admin-user-meta">
-                    Joined {user.first_activity} · Last active {user.last_activity}
-                  </p>
+                <div className="admin-user-stats">
+                  <div className="admin-user-stat">
+                    <span className="admin-user-stat-num">{stats.total}</span>
+                    <span className="admin-user-stat-label">Activities</span>
+                  </div>
+                  <div className="admin-user-stat">
+                    <span className="admin-user-stat-num">{stats.completed}</span>
+                    <span className="admin-user-stat-label">Completed</span>
+                  </div>
+                  <div className="admin-user-stat">
+                    <span className="admin-user-stat-num">{stats.skipped}</span>
+                    <span className="admin-user-stat-label">Skipped</span>
+                  </div>
+                  <div className="admin-user-stat">
+                    <span className="admin-user-stat-num">{rate}%</span>
+                    <span className="admin-user-stat-label">Rate</span>
+                  </div>
                 </div>
               </div>
-              <div className="admin-user-stats">
-                <div className="admin-user-stat">
-                  <span className="admin-user-stat-num">{user.total_activities}</span>
-                  <span className="admin-user-stat-label">Activities</span>
-                </div>
-                <div className="admin-user-stat">
-                  <span className="admin-user-stat-num">{user.completed_activities}</span>
-                  <span className="admin-user-stat-label">Completed</span>
-                </div>
-                <div className="admin-user-stat">
-                  <span className="admin-user-stat-num">
-                    {user.total_activities > 0 ? Math.round((user.completed_activities / user.total_activities) * 100) : 0}%
-                  </span>
-                  <span className="admin-user-stat-label">Rate</span>
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
 
-          {users.length === 0 && (
+          {registeredUsers.length === 0 && (
             <div className="glass-card" style={{ padding: "2rem", textAlign: "center" }}>
               <p style={{ color: "var(--text-muted)" }}>No users yet.</p>
             </div>

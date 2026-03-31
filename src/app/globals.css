@@ -1675,6 +1675,59 @@ body::after {
   font-size: 0.82rem;
 }
 
+.auth-success {
+  padding: 0.6rem 0.85rem;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: var(--radius-xs);
+  color: #6ee7b7;
+  font-size: 0.82rem;
+}
+
+.auth-verify-section {
+  text-align: center;
+}
+
+.auth-verify-icon {
+  font-size: 2.5rem;
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.auth-verify-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+}
+
+.auth-verify-desc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 1.25rem;
+}
+
+.auth-verify-desc strong {
+  color: var(--accent-light);
+}
+
+.auth-verify-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 1rem;
+}
+
+.otp-input {
+  text-align: center;
+  font-size: 1.5rem !important;
+  letter-spacing: 0.5em;
+  font-weight: 700;
+  padding: 0.85rem !important;
+}
+
 .auth-submit {
   padding: 0.8rem;
   background: linear-gradient(135deg, var(--accent), var(--accent-light));
