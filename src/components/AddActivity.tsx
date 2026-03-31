@@ -48,6 +48,7 @@ export default function AddActivity({ onAdd, defaultDate }: Props) {
       timestamp: new Date(timestamp).toISOString(),
       date: selectedDate,
       completed: false,
+      skipped: false,
     });
 
     setText("");
