@@ -800,21 +800,50 @@ body::after {
 .timeline-actions {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.3rem;
 }
 
-.timeline-content:hover .delete-btn,
-.timeline-content:hover .skip-btn { opacity: 0.4; }
-.delete-btn:hover, .skip-btn:hover { opacity: 1 !important; }
+.timeline-content:hover .delete-btn { opacity: 0.4; }
+.delete-btn:hover { opacity: 1 !important; }
 
-.skip-btn, .unskip-btn {
-  background: none;
-  border: none;
-  font-size: 0.8rem;
+.skip-btn {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 6px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: #f59e0b;
   cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s;
-  padding: 0.15rem;
+  padding: 0.2rem 0.5rem;
+  transition: all 0.2s;
+  font-family: inherit;
+  letter-spacing: 0.03em;
+  opacity: 1;
+}
+
+.skip-btn:hover {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.5);
+  transform: translateY(-1px);
+}
+
+.unskip-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  transition: all 0.2s;
+  font-family: inherit;
+  opacity: 1;
+}
+
+.unskip-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
 }
 
 .unskip-btn {

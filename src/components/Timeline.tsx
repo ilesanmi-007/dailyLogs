@@ -191,7 +191,7 @@ export default function Timeline({
                         className="skip-btn"
                         title="Skip with reason"
                       >
-                        ⏭
+                        Skip
                       </button>
                     )}
                     {isSkipped && (
@@ -200,7 +200,7 @@ export default function Timeline({
                         className="unskip-btn"
                         title="Undo skip"
                       >
-                        ↩
+                        Undo
                       </button>
                     )}
                     <button
