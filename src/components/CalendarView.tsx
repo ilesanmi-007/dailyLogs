@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getActivities, getActivitiesByDate, formatDate, Activity, CATEGORIES } from "@/lib/store";
+import { getActivities, getActivitiesByDate, formatDate, getToday, Activity, CATEGORIES } from "@/lib/store";
 import Timeline from "./Timeline";
 
 export default function CalendarView() {
@@ -32,7 +32,7 @@ export default function CalendarView() {
 
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const today = new Date().toISOString().split("T")[0];
+  const today = getToday();
 
   const prevMonth = () => setCurrentMonth(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentMonth(new Date(year, month + 1, 1));

@@ -97,7 +97,7 @@ export async function deleteActivity(id: string): Promise<void> {
   if (error) console.error("Error deleting activity:", error);
 }
 
-export async function toggleActivity(id: string, currentCompleted?: boolean): Promise<void> {
+export async function toggleActivity(id: string, currentCompleted?: boolean): Promise<boolean> {
   if (!isSupabaseConfigured) {
     const all = getLocalActivities();
     const idx = all.findIndex((a) => a.id === id);
@@ -105,17 +105,28 @@ export async function toggleActivity(id: string, currentCompleted?: boolean): Pr
       all[idx].completed = !all[idx].completed;
       saveLocalActivities(all);
     }
-    return;
+    return true;
+  }
+
+  // Get current user to ensure RLS match
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    console.error("Toggle failed: no authenticated user");
+    return false;
   }
 
   // If current state is provided, use it directly (avoids extra SELECT)
   if (currentCompleted !== undefined) {
-    const { error } = await supabase
+    const { error, count } = await supabase
       .from("activities")
       .update({ completed: !currentCompleted })
-      .eq("id", id);
-    if (error) console.error("Error toggling activity:", error);
-    return;
+      .eq("id", id)
+      .eq("user_id", user.id);
+    if (error) {
+      console.error("Error toggling activity:", error);
+      return false;
+    }
+    return true;
   }
 
   // Fallback: fetch current state first
@@ -123,18 +134,24 @@ export async function toggleActivity(id: string, currentCompleted?: boolean): Pr
     .from("activities")
     .select("completed")
     .eq("id", id)
+    .eq("user_id", user.id)
     .single();
   if (fetchError) {
     console.error("Error fetching activity for toggle:", fetchError);
-    return;
+    return false;
   }
   if (data) {
     const { error } = await supabase
       .from("activities")
       .update({ completed: !data.completed })
-      .eq("id", id);
-    if (error) console.error("Error toggling activity:", error);
+      .eq("id", id)
+      .eq("user_id", user.id);
+    if (error) {
+      console.error("Error toggling activity:", error);
+      return false;
+    }
   }
+  return true;
 }
 
 export async function skipActivity(id: string, reason: string): Promise<void> {
@@ -196,7 +213,15 @@ export async function getActivitiesByDate(date: string): Promise<Activity[]> {
 // ===== Utility Functions =====
 
 export function getToday(): string {
-  return new Date().toISOString().split("T")[0];
+  return toLocalDateStr(new Date());
+}
+
+/** Convert a Date to local YYYY-MM-DD string (avoids UTC shift from toISOString) */
+export function toLocalDateStr(d: Date): string {
+  const year = d.getFullYear();
+  const month = (d.getMonth() + 1).toString().padStart(2, "0");
+  const day = d.getDate().toString().padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export function formatDate(dateStr: string): string {
@@ -233,7 +258,7 @@ export function getStreakFromList(activities: Activity[]): number {
   if (days.length === 0) return 0;
 
   const today = getToday();
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+  const yesterday = toLocalDateStr(new Date(Date.now() - 86400000));
   if (days[0] !== today && days[0] !== yesterday) return 0;
 
   let streak = 1;
@@ -318,18 +343,35 @@ export async function markReminderSent(id: string): Promise<void> {
   if (error) console.error("Error marking reminder sent:", error);
 }
 
-export function fireNotification(title: string, body: string) {
+export async function fireNotification(title: string, body: string) {
   if (typeof window === "undefined" || !("Notification" in window)) return;
   if (Notification.permission !== "granted") return;
+
+  // Prefer service worker notification (works on mobile + background)
+  try {
+    const reg = await navigator.serviceWorker?.ready;
+    if (reg) {
+      await reg.showNotification(title, {
+        body,
+        icon: "/icons/icon-192.png",
+        badge: "/icons/icon-192.png",
+        tag: "daylog-reminder",
+      } as NotificationOptions);
+      return;
+    }
+  } catch {
+    // SW not available, fall through to Notification constructor
+  }
+
+  // Fallback: direct Notification constructor (desktop only)
   try {
     new Notification(title, {
       body,
-      icon: "/favicon.ico",
-      badge: "/favicon.ico",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
       tag: "daylog-reminder",
     });
   } catch {
-    // Fallback: some mobile browsers don't support Notification constructor
     console.log("Notification not supported in this context");
   }
 }
@@ -634,7 +676,7 @@ export function getStatsFromList(activities: Activity[]) {
   const last7Days: { date: string; total: number; done: number }[] = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date(Date.now() - i * 86400000);
-    const dateStr = d.toISOString().split("T")[0];
+    const dateStr = toLocalDateStr(d);
     const dayActivities = activities.filter((a) => a.date === dateStr);
     last7Days.push({
       date: d.toLocaleDateString("en-US", { weekday: "short" }),

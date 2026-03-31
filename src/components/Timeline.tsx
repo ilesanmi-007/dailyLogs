@@ -48,9 +48,19 @@ export default function Timeline({
     onChange();
   };
 
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
   const handleToggle = async (id: string, currentCompleted: boolean) => {
-    await toggleActivity(id, currentCompleted);
-    onChange();
+    if (togglingId === id) return; // Prevent double-tap
+    setTogglingId(id);
+    try {
+      const success = await toggleActivity(id, currentCompleted);
+      if (success) {
+        onChange();
+      }
+    } finally {
+      setTogglingId(null);
+    }
   };
 
   const handleSkipSubmit = async () => {
@@ -155,7 +165,8 @@ export default function Timeline({
               <div className="timeline-line">
                 <button
                   className={`check-btn ${isDone ? "checked" : ""} ${isSkipped ? "skipped-check" : ""}`}
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     if (isSkipped) return;
                     handleToggle(activity.id, activity.completed);
                   }}

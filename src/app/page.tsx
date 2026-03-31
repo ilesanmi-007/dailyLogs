@@ -6,6 +6,7 @@ import {
   getActivitiesByDate,
   getActivities,
   getToday,
+  toLocalDateStr,
   formatDate,
   getStreakFromList,
   getCompletionFromList,
@@ -25,11 +26,14 @@ const Timeline = dynamic(() => import("@/components/Timeline"), {
 const WeeklySummary = dynamic(() => import("@/components/WeeklySummary"), {
   ssr: false,
 });
+const NewDayCelebration = dynamic(() => import("@/components/NewDayCelebration"), {
+  ssr: false,
+});
 
 function getDateOffset(dateStr: string, offset: number): string {
   const d = new Date(dateStr + "T12:00:00");
   d.setDate(d.getDate() + offset);
-  return d.toISOString().split("T")[0];
+  return toLocalDateStr(d);
 }
 
 function getShortDay(dateStr: string): string {
@@ -147,6 +151,9 @@ export default function Home() {
 
   return (
     <div className="app-container">
+      {/* New day celebration — shows once per day */}
+      {isToday && <NewDayCelebration displayName={displayName} />}
+
       <header className="app-header">
         <div className="header-top">
           <div>

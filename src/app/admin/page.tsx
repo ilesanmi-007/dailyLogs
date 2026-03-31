@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { getToday } from "@/lib/store";
 import Navbar from "@/components/Navbar";
 
 const ADMIN_EMAIL = "samsonademola56@gmail.com";
@@ -84,7 +85,7 @@ export default function AdminPage() {
 
     // Compute per-user activity stats
     const activityMap: Record<string, UserActivityStats> = {};
-    const today = new Date().toISOString().split("T")[0];
+    const today = getToday();
     let todayCount = 0;
 
     (activities || []).forEach((a: { user_id: string; completed: boolean; skipped: boolean; date: string }) => {
@@ -117,7 +118,7 @@ export default function AdminPage() {
 
           // Build signup timeline and stats
           const now = new Date();
-          const todayStr = now.toISOString().split("T")[0];
+          const todayStr = getToday();
           const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
           const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -298,7 +299,7 @@ export default function AdminPage() {
               {signupTimeline.map((entry) => {
                 const maxCount = Math.max(...signupTimeline.map((e) => e.count), 1);
                 const heightPct = entry.count > 0 ? Math.max((entry.count / maxCount) * 100, 8) : 0;
-                const isToday = entry.date === new Date().toISOString().split("T")[0];
+                const isToday = entry.date === getToday();
                 const dayLabel = new Date(entry.date + "T12:00:00").toLocaleDateString("en", { weekday: "narrow" });
                 const dateNum = new Date(entry.date + "T12:00:00").getDate();
                 const showLabel = dateNum === 1 || dateNum % 5 === 0 || isToday;

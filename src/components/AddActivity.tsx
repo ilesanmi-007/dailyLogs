@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CATEGORIES, addActivity, getToday, formatDate, requestNotificationPermission } from "@/lib/store";
+import { CATEGORIES, addActivity, getToday, toLocalDateStr, formatDate, requestNotificationPermission } from "@/lib/store";
 
 interface Props {
   onAdd: () => void;
@@ -75,11 +75,11 @@ export default function AddActivity({ onAdd, defaultDate }: Props) {
     { label: "Today", value: getToday() },
     {
       label: "Yesterday",
-      value: new Date(Date.now() - 86400000).toISOString().split("T")[0],
+      value: toLocalDateStr(new Date(Date.now() - 86400000)),
     },
     {
       label: "2 days ago",
-      value: new Date(Date.now() - 2 * 86400000).toISOString().split("T")[0],
+      value: toLocalDateStr(new Date(Date.now() - 2 * 86400000)),
     },
   ];
 
