@@ -26,13 +26,18 @@ export default function AddActivity({ onAdd, defaultDate }: Props) {
   const [selectedDate, setSelectedDate] = useState(defaultDate || getToday());
   const [reminderTime, setReminderTime] = useState("");
 
+  const addTagFromInput = () => {
+    const value = tagInput.trim().toLowerCase();
+    if (value && !tags.includes(value)) {
+      setTags([...tags, value]);
+    }
+    setTagInput("");
+  };
+
   const handleAddTag = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && tagInput.trim()) {
+    if ((e.key === "Enter" || e.key === ",") && tagInput.trim()) {
       e.preventDefault();
-      if (!tags.includes(tagInput.trim().toLowerCase())) {
-        setTags([...tags, tagInput.trim().toLowerCase()]);
-      }
-      setTagInput("");
+      addTagFromInput();
     }
   };
 
@@ -207,7 +212,7 @@ export default function AddActivity({ onAdd, defaultDate }: Props) {
       </div>
 
       <div className="form-section">
-        <label className="form-label">Tags</label>
+        <label className="form-label">Tags <span className="form-label-hint">(optional)</span></label>
         <div className="tags-container">
           {tags.map((tag) => (
             <span key={tag} className="tag" style={{ backgroundColor: selectedCat.color + "20", color: selectedCat.color }}>
@@ -215,13 +220,24 @@ export default function AddActivity({ onAdd, defaultDate }: Props) {
               <button type="button" onClick={() => removeTag(tag)} className="tag-remove">×</button>
             </span>
           ))}
-          <input
-            value={tagInput}
-            onChange={(e) => setTagInput(e.target.value)}
-            onKeyDown={handleAddTag}
-            placeholder={tags.length === 0 ? "Add tags (press Enter)" : "Add more..."}
-            className="tag-input"
-          />
+          <div className="tag-input-row">
+            <input
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={handleAddTag}
+              placeholder={tags.length === 0 ? "e.g. urgent, gym" : "Add more..."}
+              className="tag-input"
+            />
+            {tagInput.trim() && (
+              <button
+                type="button"
+                className="tag-add-btn"
+                onClick={addTagFromInput}
+              >
+                +
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

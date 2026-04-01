@@ -539,6 +539,43 @@ body::after {
 
 .tag-input::placeholder { color: var(--text-muted); }
 
+.tag-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.tag-input-row .tag-input { min-width: 50px; }
+
+.tag-add-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  font-family: inherit;
+  line-height: 1;
+}
+
+.tag-add-btn:active { transform: scale(0.9); }
+
+.form-label-hint {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
 /* ===== Submit Button ===== */
 
 .submit-btn {

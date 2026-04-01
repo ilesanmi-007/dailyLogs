@@ -49,9 +49,14 @@ function saveLocalActivities(activities: Activity[]): void {
 export async function getActivities(): Promise<Activity[]> {
   if (!isSupabaseConfigured) return getLocalActivities();
 
+  // Always filter by current user to prevent seeing other users' data
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
   const { data, error } = await supabase
     .from("activities")
     .select("*")
+    .eq("user_id", user.id)
     .order("timestamp", { ascending: false });
   if (error) {
     console.error("Error fetching activities:", error);
@@ -198,9 +203,14 @@ export async function getActivitiesByDate(date: string): Promise<Activity[]> {
     return getLocalActivities().filter((a) => a.date === date);
   }
 
+  // Always filter by current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
   const { data, error } = await supabase
     .from("activities")
     .select("*")
+    .eq("user_id", user.id)
     .eq("date", date)
     .order("timestamp", { ascending: false });
   if (error) {
